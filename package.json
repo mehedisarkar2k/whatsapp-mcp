@@ -1,12 +1,28 @@
 {
   "name": "whatsapp-mcp",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "dist/main.js",
   "scripts": {
     "start": "tsx src/index.ts",
     "daemon": "tsx src/daemon.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "electron:start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.whatsappmcp.app",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon.png"
+    }
   },
   "keywords": [],
   "author": "",
@@ -22,6 +38,9 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.4",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "menubar": "^9.5.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
