@@ -21,7 +21,6 @@
     ],
     "mac": {
       "target": "dmg",
-      "icon": "public/icon.png",
       "identity": null
     }
   },
@@ -33,6 +32,7 @@
     "@modelcontextprotocol/server": "^2.3.0",
     "better-sqlite3": "^13.0.3",
     "express": "^5.2.1",
+    "menubar": "^9.5.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -41,7 +41,6 @@
     "@types/node": "^26.6.4",
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
-    "menubar": "^9.5.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

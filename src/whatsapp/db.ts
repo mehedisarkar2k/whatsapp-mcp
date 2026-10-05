@@ -85,14 +85,17 @@ export function getRecentMessages(limit = 20, chatJid?: string): WhatsAppMessage
       m.ZSTANZAID as stanzaId,
       m.ZTEXT as text,
       m.ZMESSAGEDATE as messageDate,
-      m.ZFROMJID as senderJid,
-      m.ZPUSHNAME as senderName,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END as senderJid,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' ELSE COALESCE(pn.ZPUSHNAME, c_sender.ZPARTNERNAME) END as senderName,
       m.ZISFROMME as isFromMe,
       c.ZCONTACTJID as chatJid,
       c.ZPARTNERNAME as chatName
     FROM ZWAMESSAGE m
     LEFT JOIN ZWACHATSESSION c ON m.ZCHATSESSION = c.Z_PK
-    WHERE m.ZMESSAGEDATE >= ?
+    LEFT JOIN ZWAGROUPMEMBER gm ON m.ZGROUPMEMBER = gm.Z_PK
+    LEFT JOIN ZWAPROFILEPUSHNAME pn ON pn.ZJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    LEFT JOIN ZWACHATSESSION c_sender ON c_sender.ZCONTACTJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    WHERE m.ZTEXT IS NOT NULL AND m.ZMESSAGEDATE >= ?
   `;
   const params: any[] = [timeThreshold];
 
@@ -118,14 +121,17 @@ export function searchMessages(query: string, limit = 30, chatJid?: string): Wha
       m.ZSTANZAID as stanzaId,
       m.ZTEXT as text,
       m.ZMESSAGEDATE as messageDate,
-      m.ZFROMJID as senderJid,
-      m.ZPUSHNAME as senderName,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END as senderJid,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' ELSE COALESCE(pn.ZPUSHNAME, c_sender.ZPARTNERNAME) END as senderName,
       m.ZISFROMME as isFromMe,
       c.ZCONTACTJID as chatJid,
       c.ZPARTNERNAME as chatName
     FROM ZWAMESSAGE m
     LEFT JOIN ZWACHATSESSION c ON m.ZCHATSESSION = c.Z_PK
-    WHERE m.ZMESSAGEDATE >= ? AND m.ZTEXT LIKE ?
+    LEFT JOIN ZWAGROUPMEMBER gm ON m.ZGROUPMEMBER = gm.Z_PK
+    LEFT JOIN ZWAPROFILEPUSHNAME pn ON pn.ZJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    LEFT JOIN ZWACHATSESSION c_sender ON c_sender.ZCONTACTJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    WHERE m.ZTEXT IS NOT NULL AND m.ZMESSAGEDATE >= ? AND m.ZTEXT LIKE ?
   `;
   const params: any[] = [timeThreshold, `%${query}%`];
 
@@ -151,14 +157,17 @@ export function getChatHistory(chatJid: string, limit = 50): WhatsAppMessage[] {
       m.ZSTANZAID as stanzaId,
       m.ZTEXT as text,
       m.ZMESSAGEDATE as messageDate,
-      m.ZFROMJID as senderJid,
-      m.ZPUSHNAME as senderName,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END as senderJid,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' ELSE COALESCE(pn.ZPUSHNAME, c_sender.ZPARTNERNAME) END as senderName,
       m.ZISFROMME as isFromMe,
       c.ZCONTACTJID as chatJid,
       c.ZPARTNERNAME as chatName
     FROM ZWAMESSAGE m
     LEFT JOIN ZWACHATSESSION c ON m.ZCHATSESSION = c.Z_PK
-    WHERE m.ZMESSAGEDATE >= ? AND c.ZCONTACTJID = ?
+    LEFT JOIN ZWAGROUPMEMBER gm ON m.ZGROUPMEMBER = gm.Z_PK
+    LEFT JOIN ZWAPROFILEPUSHNAME pn ON pn.ZJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    LEFT JOIN ZWACHATSESSION c_sender ON c_sender.ZCONTACTJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    WHERE m.ZTEXT IS NOT NULL AND m.ZMESSAGEDATE >= ? AND c.ZCONTACTJID = ?
     ORDER BY m.ZMESSAGEDATE DESC LIMIT ?
   `;
   const params: any[] = [timeThreshold, chatJid, limit];
@@ -181,14 +190,17 @@ export function getDigestData(hours = 24, limitPerChat = 10, chatJid?: string): 
       m.ZSTANZAID as stanzaId,
       m.ZTEXT as text,
       m.ZMESSAGEDATE as messageDate,
-      m.ZFROMJID as senderJid,
-      m.ZPUSHNAME as senderName,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END as senderJid,
+      CASE WHEN m.ZISFROMME = 1 THEN 'Me' ELSE COALESCE(pn.ZPUSHNAME, c_sender.ZPARTNERNAME) END as senderName,
       m.ZISFROMME as isFromMe,
       c.ZCONTACTJID as chatJid,
       c.ZPARTNERNAME as chatName
     FROM ZWAMESSAGE m
     LEFT JOIN ZWACHATSESSION c ON m.ZCHATSESSION = c.Z_PK
-    WHERE m.ZMESSAGEDATE >= ?
+    LEFT JOIN ZWAGROUPMEMBER gm ON m.ZGROUPMEMBER = gm.Z_PK
+    LEFT JOIN ZWAPROFILEPUSHNAME pn ON pn.ZJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    LEFT JOIN ZWACHATSESSION c_sender ON c_sender.ZCONTACTJID = (CASE WHEN m.ZGROUPMEMBER IS NOT NULL THEN gm.ZMEMBERJID ELSE m.ZFROMJID END)
+    WHERE m.ZTEXT IS NOT NULL AND m.ZMESSAGEDATE >= ?
   `;
   
   const params: any[] = [timeThreshold];

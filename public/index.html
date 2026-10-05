@@ -67,17 +67,9 @@
     
     <div class="guide">
       <b>Claude Configuration:</b><br/>
-      Add this to your <code>claude_desktop_config.json</code>:
-      <code>
-{
-  "mcpServers": {
-    "whatsapp-mcp": {
-      "command": "/usr/local/bin/node",
-      "args": ["/path/to/whatsapp-mcp/src/index.js"]
-    }
-  }
-}
-      </code>
+      <p style="font-size: 11px; color: #555;">Add this to your <code>claude_desktop_config.json</code>:</p>
+      <code id="config-code" style="text-align: left; white-space: pre;">Loading...</code>
+      <button class="btn" style="margin-top: 10px; background-color: #34c759;" onclick="copyConfig()">Copy Config</button>
     </div>
 
     <div class="guide">
@@ -86,5 +78,42 @@
     </div>
 
     <div class="footer">WhatsApp MCP (Local) v1.0.0</div>
+    
+    <button class="btn btn-danger" style="background-color: #ff3b30; margin-top: 15px;" onclick="quitApp()">Quit App</button>
+
+    <script>
+      const path = require('path');
+      const { ipcRenderer, clipboard } = require('electron');
+      
+      const indexJsPath = path.join(__dirname, '../dist/index.js');
+      
+      // __dirname is .../whatsapp-mcp.app/Contents/Resources/app.asar/public
+      const execPath = path.join(__dirname, '../../../../Contents/MacOS/whatsapp-mcp');
+
+      const configJson = {
+        "mcpServers": {
+          "whatsapp-mcp": {
+            "command": execPath,
+            "args": [indexJsPath],
+            "env": {
+              "ELECTRON_RUN_AS_NODE": "1",
+              "ELECTRON_NO_ATTACH_CONSOLE": "1"
+            }
+          }
+        }
+      };
+      
+      const configString = JSON.stringify(configJson, null, 2);
+      document.getElementById('config-code').innerText = configString;
+
+      function copyConfig() {
+        clipboard.writeText(configString);
+        alert("Copied to clipboard!");
+      }
+
+      function quitApp() {
+        ipcRenderer.send('quit-app');
+      }
+    </script>
   </body>
 </html>
