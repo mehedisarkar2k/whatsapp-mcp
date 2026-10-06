@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "main": "dist/main.js",
   "scripts": {
     "start": "tsx src/index.ts",
@@ -21,7 +21,8 @@
     ],
     "mac": {
       "target": "dmg",
-      "identity": null
+      "identity": null,
+      "icon": "assets/icon.png"
     }
   },
   "keywords": [],
