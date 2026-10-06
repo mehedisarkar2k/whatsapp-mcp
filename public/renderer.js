@@ -5,6 +5,7 @@ const accessToggle = document.getElementById("access-toggle");
 const accessStatus = document.getElementById("access-status");
 const databaseStatus = document.getElementById("database-status");
 const copyButton = document.getElementById("copy-config");
+const resetTokenButton = document.getElementById("reset-token");
 const quitButton = document.getElementById("quit");
 const copyLabel = copyButton.textContent;
 
@@ -48,6 +49,21 @@ copyButton.addEventListener("click", async () => {
   setTimeout(() => {
     copyButton.textContent = copyLabel;
     copyButton.disabled = false;
+  }, 1500);
+});
+
+resetTokenButton.addEventListener("click", async () => {
+  const label = resetTokenButton.textContent;
+  resetTokenButton.disabled = true;
+  try {
+    await api.resetToken();
+    resetTokenButton.textContent = "New token created";
+  } catch (err) {
+    showError(err);
+  }
+  setTimeout(() => {
+    resetTokenButton.textContent = label;
+    resetTokenButton.disabled = false;
   }, 1500);
 });
 

@@ -23,6 +23,11 @@ export function getOrCreateToken(): string {
     const existing = fs.readFileSync(TOKEN_PATH, "utf8").trim();
     if (existing.length >= 64) return existing;
   }
+  return createNewToken();
+}
+
+export function createNewToken(): string {
+  ensureAppDir();
   const token = crypto.randomBytes(32).toString("hex");
   fs.writeFileSync(TOKEN_PATH, token, { mode: 0o600 });
   fs.chmodSync(TOKEN_PATH, 0o600);

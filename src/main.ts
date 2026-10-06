@@ -3,7 +3,7 @@ import { menubar } from "menubar";
 import path from "path";
 
 // Importing the daemon also starts it.
-import { getAccessEnabled, setAccessEnabled } from "./daemon";
+import { getAccessEnabled, resetToken, setAccessEnabled } from "./daemon";
 import { closeDbAndDeleteSnapshot } from "./whatsapp/db";
 import { checkDatabaseAccess } from "./whatsapp/paths";
 
@@ -29,7 +29,7 @@ const mb = menubar({
   icon: path.join(__dirname, "../public/trayTemplate.png"),
   browserWindow: {
     width: 320,
-    height: 320,
+    height: 370,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -47,6 +47,10 @@ ipcMain.handle("set-access", (_event, enabled: unknown) => {
   }
   setAccessEnabled(enabled);
   return getState();
+});
+
+ipcMain.handle("reset-token", () => {
+  resetToken();
 });
 
 ipcMain.handle("copy-config", () => {

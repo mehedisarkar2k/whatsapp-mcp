@@ -11,6 +11,7 @@ import {
 import {
   DAEMON_HOST,
   DAEMON_PORT,
+  createNewToken,
   getOrCreateToken,
   loadAccessEnabled,
   saveAccessEnabled,
@@ -18,11 +19,16 @@ import {
 } from "./whatsapp/security.js";
 
 const app = express();
-const token = getOrCreateToken();
+let token = getOrCreateToken();
 let accessEnabled = loadAccessEnabled();
 
 export function getAccessEnabled(): boolean {
   return accessEnabled;
+}
+
+// MCP clients read the token file on every request, so they pick up the new token without a restart.
+export function resetToken(): void {
+  token = createNewToken();
 }
 
 export function setAccessEnabled(enabled: boolean): void {
