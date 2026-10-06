@@ -1,6 +1,7 @@
 import os from "os";
 import path from "path";
 import fs from "fs";
+import { APP_DIR, ensureAppDir } from "./security.js";
 
 export function getDatabasePath(): string {
   if (process.env.WHATSAPP_CHAT_DB) {
@@ -32,34 +33,36 @@ export function checkDatabaseAccess(): { exists: boolean; readable: boolean; err
   }
 }
 
+const SNAPSHOT_DIR = path.join(APP_DIR, "snapshot");
+const SNAPSHOT_PATH = path.join(SNAPSHOT_DIR, "ChatStorage.sqlite");
+const SNAPSHOT_SUFFIXES = ["", "-wal", "-shm"];
+
+function copyPrivate(from: string, to: string): void {
+  fs.copyFileSync(from, to);
+  fs.chmodSync(to, 0o600);
+}
+
+// Reading a copy avoids WhatsApp's SQLite locks. The copy holds the full chat history, so it
+// lives in a private folder and is deleted when access is turned off or the app quits.
 export function createDatabaseSnapshot(): string {
   const originalDbPath = getDatabasePath();
-  const snapshotDir = path.join(os.tmpdir(), "whatsapp-mcp-snapshot");
-  
-  if (!fs.existsSync(snapshotDir)) {
-    fs.mkdirSync(snapshotDir, { recursive: true });
+  ensureAppDir();
+  fs.mkdirSync(SNAPSHOT_DIR, { recursive: true, mode: 0o700 });
+  fs.chmodSync(SNAPSHOT_DIR, 0o700);
+
+  for (const suffix of SNAPSHOT_SUFFIXES) {
+    const source = originalDbPath + suffix;
+    const target = SNAPSHOT_PATH + suffix;
+    if (fs.existsSync(source)) {
+      copyPrivate(source, target);
+    } else if (suffix && fs.existsSync(target)) {
+      fs.unlinkSync(target);
+    }
   }
 
-  const snapshotPath = path.join(snapshotDir, "ChatStorage.sqlite");
-  
-  // Copy the main database
-  fs.copyFileSync(originalDbPath, snapshotPath);
-  
-  // Attempt to copy WAL and SHM files if they exist, to ensure consistency
-  const walPath = originalDbPath + "-wal";
-  const shmPath = originalDbPath + "-shm";
-  
-  if (fs.existsSync(walPath)) {
-    fs.copyFileSync(walPath, snapshotPath + "-wal");
-  } else {
-    if (fs.existsSync(snapshotPath + "-wal")) fs.unlinkSync(snapshotPath + "-wal");
-  }
-  
-  if (fs.existsSync(shmPath)) {
-    fs.copyFileSync(shmPath, snapshotPath + "-shm");
-  } else {
-    if (fs.existsSync(snapshotPath + "-shm")) fs.unlinkSync(snapshotPath + "-shm");
-  }
+  return SNAPSHOT_PATH;
+}
 
-  return snapshotPath;
+export function deleteDatabaseSnapshot(): void {
+  fs.rmSync(SNAPSHOT_DIR, { recursive: true, force: true });
 }

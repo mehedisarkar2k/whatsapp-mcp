@@ -2,9 +2,13 @@ export interface WhatsAppChat {
   id: string;
   name: string | null;
   isGroup: boolean;
+  isCommunity: boolean;
+  community: string | null;
   unreadCount: number;
   lastMessageTimestamp: string | null;
 }
+
+export type MessageKind = "text" | "media" | "system";
 
 export interface WhatsAppMessage {
   id: string;
@@ -16,4 +20,12 @@ export interface WhatsAppMessage {
   timestamp: string;
   direction: "inbound" | "outbound" | "unknown";
   isGroup: boolean;
+  kind: MessageKind;
+  community: string | null;
+}
+
+export interface DigestChat {
+  chatName: string;
+  isGroup: boolean;
+  messages: WhatsAppMessage[];
 }

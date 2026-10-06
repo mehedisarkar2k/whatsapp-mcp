@@ -1,23 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod";
+import { DAEMON_HOST, DAEMON_PORT, readToken } from "./whatsapp/security.js";
 
-const DAEMON_URL = "http://localhost:3456";
+const DAEMON_URL = `http://${DAEMON_HOST}:${DAEMON_PORT}`;
 
-async function fetchFromDaemon(endpoint: string, params: Record<string, any> = {}, method = "GET") {
+async function fetchFromDaemon(endpoint: string, params: Record<string, string | number | undefined> = {}) {
   const url = new URL(`${DAEMON_URL}${endpoint}`);
-  let options: RequestInit = { method };
-
-  if (method === "GET") {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        url.searchParams.append(key, String(value));
-      }
-    });
-  } else {
-    options.headers = { "Content-Type": "application/json" };
-    options.body = JSON.stringify(params);
-  }
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      url.searchParams.append(key, String(value));
+    }
+  });
+  const options: RequestInit = { headers: { Authorization: `Bearer ${readToken()}` } };
 
   try {
     const response = await fetch(url.toString(), options);
@@ -26,18 +21,22 @@ async function fetchFromDaemon(endpoint: string, params: Record<string, any> = {
       throw new Error(data.error || `HTTP ${response.status}`);
     }
     return data;
-  } catch (err: any) {
-    if (err.cause?.code === 'ECONNREFUSED' || err.message.includes('fetch failed')) {
-      throw new Error(`Failed to connect to the WhatsApp Daemon. Please make sure you are running 'npm run daemon' in your terminal.`);
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("fetch failed")) {
+      throw new Error("Failed to connect to the WhatsApp daemon. Open the WhatsApp MCP menu bar app (or run 'npm run daemon').");
     }
     throw err;
   }
 }
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 function createServer() {
   const server = new McpServer({
     name: "whatsapp-mcp",
-    version: "0.2.0",
+    version: "1.2.0",
   });
 
   server.registerTool(
@@ -72,8 +71,8 @@ function createServer() {
       try {
         const report = await fetchFromDaemon("/doctor");
         return { content: [{ type: "text", text: JSON.stringify(report, null, 2) }] };
-      } catch (err: any) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+      } catch (err: unknown) {
+        return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
       }
     }
   );
@@ -90,8 +89,8 @@ function createServer() {
       try {
         const chats = await fetchFromDaemon("/chats", { limit });
         return { content: [{ type: "text", text: JSON.stringify(chats, null, 2) }] };
-      } catch (err: any) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+      } catch (err: unknown) {
+        return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
       }
     }
   );
@@ -103,14 +102,15 @@ function createServer() {
       inputSchema: z.object({
         limit: z.number().min(1).max(100).optional().default(30),
         chatId: z.string().optional().describe("Optional WhatsApp contact JID to filter by"),
+        since: z.string().optional().describe("Only messages after this ISO time"),
       }),
     },
-    async ({ limit, chatId }) => {
+    async ({ limit, chatId, since }) => {
       try {
-        const messages = await fetchFromDaemon("/recent", { limit, chatId });
+        const messages = await fetchFromDaemon("/recent", { limit, chatId, since });
         return { content: [{ type: "text", text: JSON.stringify(messages, null, 2) }] };
-      } catch (err: any) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+      } catch (err: unknown) {
+        return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
       }
     }
   );
@@ -123,14 +123,15 @@ function createServer() {
         query: z.string().describe("The text to search for"),
         limit: z.number().min(1).max(100).optional().default(30),
         chatId: z.string().optional().describe("Optional WhatsApp contact JID to filter by"),
+        since: z.string().optional().describe("Only messages after this ISO time"),
       }),
     },
-    async ({ query, limit, chatId }) => {
+    async ({ query, limit, chatId, since }) => {
       try {
-        const messages = await fetchFromDaemon("/search", { q: query, limit, chatId });
+        const messages = await fetchFromDaemon("/search", { q: query, limit, chatId, since });
         return { content: [{ type: "text", text: JSON.stringify(messages, null, 2) }] };
-      } catch (err: any) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+      } catch (err: unknown) {
+        return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
       }
     }
   );
@@ -142,14 +143,15 @@ function createServer() {
       inputSchema: z.object({
         chatId: z.string().describe("The WhatsApp contact JID of the chat"),
         limit: z.number().min(1).max(100).optional().default(50),
+        since: z.string().optional().describe("Only messages after this ISO time"),
       }),
     },
-    async ({ chatId, limit }) => {
+    async ({ chatId, limit, since }) => {
       try {
-        const messages = await fetchFromDaemon("/history", { chatId, limit });
+        const messages = await fetchFromDaemon("/history", { chatId, limit, since });
         return { content: [{ type: "text", text: JSON.stringify(messages, null, 2) }] };
-      } catch (err: any) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+      } catch (err: unknown) {
+        return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
       }
     }
   );
@@ -162,47 +164,17 @@ function createServer() {
         hours: z.number().min(1).max(168).optional().default(24).describe("Time window in hours"),
         limitPerChat: z.number().min(1).max(50).optional().default(10).describe("Max messages to retrieve per chat"),
         chatId: z.string().optional().describe("Optional specific chat ID"),
+        since: z.string().optional().describe("Only messages after this ISO time"),
       }),
     },
-    async ({ hours, limitPerChat, chatId }) => {
+    async ({ hours, limitPerChat, chatId, since }) => {
       try {
-        const digest = await fetchFromDaemon("/digest", { hours, limitPerChat, chatId });
+        const digest = await fetchFromDaemon("/digest", { hours, limitPerChat, chatId, since });
         
-        const systemInstruction = `
-[SYSTEM INSTRUCTION FOR CLAUDE]
-The user wants a VERY CONCISE, high-level summary. 
-Do NOT provide long verbose explanations of discussions.
-Categorize the output strictly like this:
-- Urgent / Important
-- Needs Reply
-- Meetings / Deadlines
-- Low Priority (Keep this to 1-2 sentences max, just mentioning the topic)
-
-Data:
-`;
-        return { content: [{ type: "text", text: systemInstruction + JSON.stringify(digest, null, 2) }] };
-      } catch (err: any) {
-        return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+        return { content: [{ type: "text", text: JSON.stringify(digest, null, 2) }] };
+      } catch (err: unknown) {
+        return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
       }
-    }
-  );
-
-  server.registerTool(
-    "whatsapp_send_message",
-    {
-      description: "Send a message. Use this if the user asks to send or reply to a message.",
-      inputSchema: z.object({
-        chatId: z.string().optional(),
-        text: z.string().optional(),
-      }),
-    },
-    async () => {
-      return { 
-        content: [{ 
-          type: "text", 
-          text: "I cannot send or reply to messages. For security and privacy reasons, I am strictly a Read-Only assistant. I can only read your messages from the last 30 days." 
-        }] 
-      };
     }
   );
 
