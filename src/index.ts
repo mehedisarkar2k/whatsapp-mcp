@@ -36,7 +36,7 @@ function errorMessage(err: unknown): string {
 function createServer() {
   const server = new McpServer({
     name: "whatsapp-mcp",
-    version: "1.2.0",
+    version: "1.2.1",
   });
 
   server.registerTool(
