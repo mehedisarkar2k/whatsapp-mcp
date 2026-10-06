@@ -1,28 +1,78 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
-import { menubar } from 'menubar';
-import path from 'path';
+import { app, clipboard, ipcMain } from "electron";
+import { menubar } from "menubar";
+import path from "path";
 
-console.log("HELLO FROM MAIN.TS!");
+// Importing the daemon also starts it.
+import { getAccessEnabled, setAccessEnabled } from "./daemon";
+import { closeDbAndDeleteSnapshot } from "./whatsapp/db";
+import { checkDatabaseAccess } from "./whatsapp/paths";
 
-// Start the daemon internally
-import './daemon';
+interface AppState {
+  accessEnabled: boolean;
+  version: string;
+  databaseReadable: boolean;
+  databaseError?: string;
+}
+
+function getState(): AppState {
+  const access = checkDatabaseAccess();
+  return {
+    accessEnabled: getAccessEnabled(),
+    version: app.getVersion(),
+    databaseReadable: access.readable,
+    databaseError: access.error,
+  };
+}
 
 const mb = menubar({
-  index: `file://${path.join(__dirname, '../public/index.html')}`,
+  index: `file://${path.join(__dirname, "../public/index.html")}`,
+  icon: path.join(__dirname, "../public/trayTemplate.png"),
   browserWindow: {
     width: 320,
-    height: 520,
+    height: 320,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, "preload.js"),
     },
   },
 });
 
-ipcMain.on('quit-app', () => {
+ipcMain.handle("get-state", () => getState());
+
+ipcMain.handle("set-access", (_event, enabled: unknown) => {
+  if (typeof enabled !== "boolean") {
+    throw new Error("set-access expects a boolean");
+  }
+  setAccessEnabled(enabled);
+  return getState();
+});
+
+ipcMain.handle("copy-config", () => {
+  const config = {
+    mcpServers: {
+      "whatsapp-mcp": {
+        command: path.join(path.dirname(process.execPath), "whatsapp-mcp"),
+        args: [path.join(app.getAppPath(), "dist/index.js")],
+        env: {
+          ELECTRON_RUN_AS_NODE: "1",
+          ELECTRON_NO_ATTACH_CONSOLE: "1",
+        },
+      },
+    },
+  };
+  clipboard.writeText(JSON.stringify(config, null, 2));
+});
+
+ipcMain.handle("quit", () => {
   app.quit();
 });
 
-mb.on('ready', () => {
-  console.log('WhatsApp MCP Mac App is ready.');
+app.on("before-quit", () => {
+  closeDbAndDeleteSnapshot();
+});
+
+mb.on("ready", () => {
+  console.log("WhatsApp MCP Mac App is ready.");
 });

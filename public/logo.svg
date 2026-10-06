@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="WhatsApp MCP">
+  <rect x="6" y="8" width="52" height="40" rx="12" fill="#25D366" />
+  <path d="M18 44 L18 58 L32 48 Z" fill="#25D366" />
+  <path d="M28.5 26v-3.5a3.5 3.5 0 0 1 7 0V26" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+  <rect x="25" y="25" width="14" height="12" rx="2.5" fill="#ffffff" />
+</svg>
