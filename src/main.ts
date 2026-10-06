@@ -1,4 +1,4 @@
-import { app, clipboard, ipcMain } from "electron";
+import { app, clipboard, ipcMain, Menu } from "electron";
 import { menubar } from "menubar";
 import path from "path";
 
@@ -24,7 +24,14 @@ function getState(): AppState {
   };
 }
 
+// A second launch (e.g. opening the app from Applications again) would fail to bind the port,
+// so it hands over to the running instance, which shows its popup.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+}
+
 const mb = menubar({
+  preloadWindow: true,
   index: `file://${path.join(__dirname, "../public/index.html")}`,
   icon: path.join(__dirname, "../public/trayTemplate.png"),
   browserWindow: {
@@ -77,6 +84,28 @@ app.on("before-quit", () => {
   closeDbAndDeleteSnapshot();
 });
 
+function showPopup(): void {
+  mb.showWindow().catch((err: unknown) => console.error("Could not show the popup:", err));
+}
+
+function showContextMenu(): void {
+  const menu = Menu.buildFromTemplate([
+    { label: "Open WhatsApp MCP", click: showPopup },
+    {
+      label: "WhatsApp access",
+      type: "checkbox",
+      checked: getAccessEnabled(),
+      click: (item) => setAccessEnabled(item.checked),
+    },
+    { type: "separator" },
+    { label: "Quit WhatsApp MCP", click: () => app.quit() },
+  ]);
+  mb.tray.popUpContextMenu(menu);
+}
+
+app.on("second-instance", showPopup);
+
 mb.on("ready", () => {
-  console.log("WhatsApp MCP Mac App is ready.");
+  mb.tray.on("right-click", showContextMenu);
+  showPopup();
 });

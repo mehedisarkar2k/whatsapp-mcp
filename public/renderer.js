@@ -71,4 +71,5 @@ quitButton.addEventListener("click", () => {
   api.quit();
 });
 
+window.addEventListener("focus", refresh);
 refresh();
