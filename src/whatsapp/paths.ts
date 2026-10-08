@@ -13,6 +13,11 @@ export function getDatabasePath(): string {
   );
 }
 
+// Media files sit next to the database, in the "Message" folder of WhatsApp's shared container.
+export function getMediaRoot(): string {
+  return path.join(path.dirname(getDatabasePath()), "Message");
+}
+
 export function checkDatabaseAccess(): { exists: boolean; readable: boolean; error?: string } {
   const dbPath = getDatabasePath();
   try {

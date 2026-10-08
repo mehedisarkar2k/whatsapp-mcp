@@ -29,9 +29,10 @@ This project is split into two parts to solve macOS `Full Disk Access` limitatio
 - `whatsapp_recent_messages`: Fetches recent messages globally or from a specific chat. `since` returns only newer messages.
 - `whatsapp_search_messages`: Searches messages by text query (e.g., "meeting", "payment").
 - `whatsapp_chat_history`: Gets chronological message history for a specific chat.
+- `whatsapp_get_media`: Returns the image of a message (use the message `id`) so the AI can see it. Images and stickers only. It reads only inside WhatsApp's own Media folder (symlinks and `..` are refused), and images over 3 MB are shrunk to 1600 px.
 - `whatsapp_digest_data`: Provides a grouped, structured payload specially designed for AI models to answer _"What did I miss on WhatsApp today?"_
 
-Messages include the community name (when known), mentions resolved to names, readable system events and placeholders for media (`[Image]`, `[Document: name]`).
+Messages include the community name (when known), mentions resolved to names, readable system events and placeholders for media (`[Image]`, `[Document: name]`). Use `whatsapp_get_media` to view an image.
 
 ---
 

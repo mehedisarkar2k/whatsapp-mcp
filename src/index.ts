@@ -36,7 +36,7 @@ function errorMessage(err: unknown): string {
 function createServer() {
   const server = new McpServer({
     name: "whatsapp-mcp",
-    version: "1.2.2",
+    version: "1.3.0",
   });
 
   server.registerTool(
@@ -172,6 +172,31 @@ function createServer() {
         const digest = await fetchFromDaemon("/digest", { hours, limitPerChat, chatId, since });
         
         return { content: [{ type: "text", text: JSON.stringify(digest, null, 2) }] };
+      } catch (err: unknown) {
+        return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "whatsapp_get_media",
+    {
+      description:
+        "Get the image of a WhatsApp message so it can be viewed. Use the message 'id' from other tools. Images and stickers only, read-only. Large images are shrunk to 1600 px.",
+      inputSchema: z.object({
+        messageId: z.string().describe("The 'id' of the message that shows [Image]"),
+        chatId: z.string().optional().describe("Optional chat ID, to be exact if IDs ever repeat"),
+      }),
+    },
+    async ({ messageId, chatId }) => {
+      try {
+        const media = await fetchFromDaemon("/media", { messageId, chatId });
+        return {
+          content: [
+            { type: "image", data: media.data, mimeType: media.mimeType },
+            { type: "text", text: `Image ${media.mimeType}, ${media.bytes} bytes${media.resized ? ", resized" : ""}.` },
+          ],
+        };
       } catch (err: unknown) {
         return { content: [{ type: "text", text: `Error: ${errorMessage(err)}` }], isError: true };
       }

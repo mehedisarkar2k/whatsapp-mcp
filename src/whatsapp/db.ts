@@ -241,3 +241,29 @@ export function getDigestData(hours = 24, limitPerChat = 10, chatJid?: string, s
 
   return grouped;
 }
+
+export interface MediaRecord {
+  localPath: string;
+  messageType: number;
+  chatJid: string | null;
+}
+
+export function getMediaRecord(stanzaId: string, chatJid?: string): MediaRecord | null {
+  const conditions = [`m.ZSTANZAID = ?`];
+  const params: string[] = [stanzaId];
+  if (chatJid) {
+    conditions.push(`c.ZCONTACTJID = ?`);
+    params.push(chatJid);
+  }
+  const row = getDb()
+    .prepare(
+      `SELECT mi.ZMEDIALOCALPATH as localPath, m.ZMESSAGETYPE as messageType, c.ZCONTACTJID as chatJid
+       FROM ZWAMESSAGE m
+       LEFT JOIN ZWACHATSESSION c ON m.ZCHATSESSION = c.Z_PK
+       JOIN ZWAMEDIAITEM mi ON mi.Z_PK = m.ZMEDIAITEM
+       WHERE ${conditions.join(" AND ")} LIMIT 1`
+    )
+    .get(...params) as { localPath: string | null; messageType: number | null; chatJid: string | null } | undefined;
+  if (!row?.localPath) return null;
+  return { localPath: row.localPath, messageType: row.messageType ?? 0, chatJid: row.chatJid };
+}

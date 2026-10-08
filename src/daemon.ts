@@ -6,8 +6,10 @@ import {
   searchMessages,
   getChatHistory,
   getDigestData,
+  getMediaRecord,
   closeDbAndDeleteSnapshot,
 } from "./whatsapp/db.js";
+import { MediaError, loadImage } from "./whatsapp/media.js";
 import {
   DAEMON_HOST,
   DAEMON_PORT,
@@ -155,6 +157,24 @@ app.get("/digest", (req, res) => {
     res.json(getDigestData(hours, limitPerChat, stringParam(req.query.chatId), since.since));
   } catch (err: unknown) {
     res.status(500).json({ error: errorMessage(err) });
+  }
+});
+
+app.get("/media", async (req, res) => {
+  try {
+    const messageId = stringParam(req.query.messageId);
+    if (!messageId) {
+      res.status(400).json({ error: "Missing query parameter 'messageId'" });
+      return;
+    }
+    const record = getMediaRecord(messageId, stringParam(req.query.chatId));
+    if (!record) {
+      res.status(404).json({ error: "No media found for that message ID." });
+      return;
+    }
+    res.json(await loadImage(record));
+  } catch (err: unknown) {
+    res.status(err instanceof MediaError ? 422 : 500).json({ error: errorMessage(err) });
   }
 });
 
